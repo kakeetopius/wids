@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">SYSTEM OVERVIEW</p>
+    <h1>Overview</h1>
+    <p class="subheading">Monitor detection status, model readiness, and recent alerts.</p>
+  </div>
+  <span class="pill neutral">Prototype</span>
+</div>
+
+<div class="notice">
+  <span class="notice-bar"></span>
+  <div>
+    <strong>Offline evaluation mode</strong>
+    <p>The trained model is available, but live wireless capture and automatic response are not connected.</p>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <article class="stat-card">
+    <div class="stat-top"><span>Detection engine</span><span class="stat-symbol">01</span></div>
+    <div class="stat-value compact">{{ system_state }}</div>
+    <div class="stat-foot">Live capture is not connected</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top"><span>Classification model</span><span class="stat-symbol">02</span></div>
+    <div class="stat-value compact">{{ model_state }}</div>
+    <div class="stat-foot">Use the Model page for measured results</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top"><span>Dataset</span><span class="stat-symbol">03</span></div>
+    <div class="stat-value compact">{{ dataset_state }}</div>
+    <div class="stat-foot">AWID3 labels and capture splits recorded</div>
+  </article>
+</div>
+
+<section class="two-column">
+  <article class="panel compact-panel">
+    <p class="eyebrow">DATA</p>
+    <h2>AWID3 dataset</h2>
+    <p>Review the labels, selected features, and capture-file split used for evaluation.</p>
+    <a class="button button-secondary" href="/dataset">Review dataset</a>
+  </article>
+  <article class="panel compact-panel">
+    <p class="eyebrow">MODEL</p>
+    <h2>Inspect results</h2>
+    <p>See test-set recall, false alarms, and the confusion matrix without hiding uncertainty.</p>
+    <a class="button button-secondary" href="/model">Model status</a>
+  </article>
+</section>
+{% endblock %}

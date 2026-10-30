@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">MONITORING</p>
+    <h1>Detections</h1>
+    <p class="subheading">Review classified events and investigate suspicious wireless activity.</p>
+  </div>
+  <span class="pill neutral">{{ alert_total }} alerts</span>
+</div>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Alert history</h2>
+      <p>{{ detection_mode }}. These are model predictions, not live wireless alerts.</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Timestamp</th><th>Classification</th><th>Confidence</th><th>Severity</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for alert in alerts %}
+        <tr>
+          <td>{{ "%.3f s"|format(alert.timestamp) if alert.timestamp is not none else "Unknown" }}</td>
+          <td>Deauthentication</td>
+          <td>{{ "%.2f%%"|format(alert.confidence * 100) }}</td>
+          <td><span class="pill {% if alert.severity == 'High' %}warning{% else %}neutral{% endif %}">{{ alert.severity }}</span></td>
+          <td>{{ alert.capture }} · {{ alert.source }} → {{ alert.destination }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="table-empty">No alert records. No live detection is running.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

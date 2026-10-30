@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">DATA MANAGEMENT</p>
+    <h1>Dataset</h1>
+    <p class="subheading">Inspect dataset readiness before using it for model development.</p>
+  </div>
+  <span class="pill warning">{{ dataset_status }}</span>
+</div>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div><h2>{{ dataset_name }}</h2><p>Dataset summary</p></div>
+  </div>
+  <div class="detail-list">
+    <div><span>Records</span><strong>{% if row_count is not none %}{{ "{:,}".format(row_count) }}{% else %}Not loaded{% endif %}</strong></div>
+    <div><span>Input features</span><strong>{% if feature_count is not none %}{{ feature_count }}{% else %}Not validated{% endif %}</strong></div>
+    <div><span>Classes</span><strong>{% if class_count is not none %}{{ class_count }}{% else %}Not validated{% endif %}</strong></div>
+  </div>
+  <div class="section-note">
+    <strong>Validation checklist</strong>
+    <ul>
+      <li>Confirm the source and version of the dataset.</li>
+      <li>Verify the label meaning and class distribution.</li>
+      <li>Check capture boundaries and potential train/test leakage.</li>
+      <li>Do not use frame type/subtype as model features when they define the attack label.</li>
+      <li>Record the selected features and preprocessing steps.</li>
+    </ul>
+  </div>
+  {% if label_counts %}
+  <div class="section-note">
+    <strong>Label distribution</strong>
+    <ul>
+      {% for label, count in label_counts.items() %}
+      <li>{{ label }}: {{ "{:,}".format(count) }} rows</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

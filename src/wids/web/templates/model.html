@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">CLASSIFICATION</p>
+    <h1>Model</h1>
+    <p class="subheading">Training status, evaluation results, and the currently deployed model.</p>
+  </div>
+  <span class="pill neutral">{{ model_status }}</span>
+</div>
+
+{% if metrics %}
+<div class="notice success">
+  <span class="notice-bar"></span>
+  <div>
+    <strong>Results use unseen capture files</strong>
+    <p>Frame type and subtype were excluded because they directly encode the AWID3 deauthentication label.</p>
+  </div>
+</div>
+{% else %}
+<div class="notice">
+  <span class="notice-bar"></span>
+  <div>
+    <strong>No model results have been recorded</strong>
+    <p>Run <code>uv run python -m wids.train</code> to train and evaluate the model.</p>
+  </div>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <div><h2>Final test metrics</h2><p>The test files were not used to train the model or select its alert threshold.</p></div>
+  </div>
+  <div class="metric-placeholder">
+    <div><span>Accuracy</span><strong>{% if metrics %}{{ "%.2f%%"|format(metrics.accuracy * 100) }}{% else %}—{% endif %}</strong></div>
+    <div><span>Deauth precision</span><strong>{% if metrics %}{{ "%.2f%%"|format(metrics.classification_report.Deauth.precision * 100) }}{% else %}—{% endif %}</strong></div>
+    <div><span>Deauth recall</span><strong>{% if metrics %}{{ "%.2f%%"|format(metrics.classification_report.Deauth.recall * 100) }}{% else %}—{% endif %}</strong></div>
+    <div><span>Deauth F1-score</span><strong>{% if metrics %}{{ "%.2f%%"|format(metrics.classification_report.Deauth["f1-score"] * 100) }}{% else %}—{% endif %}</strong></div>
+  </div>
+</section>
+
+{% if dataset %}
+<section class="panel compact-panel">
+  <p class="eyebrow">EVALUATION DESIGN</p>
+  <h2>Trust notes</h2>
+  <p>Training used capture files other than the validation and final test groups. The alert threshold was selected on validation data.</p>
+  <div class="detail-list">
+    <div><span>Validation files</span><strong>{{ dataset.validation_files|join(", ") }}</strong></div>
+    <div><span>Final test files</span><strong>{{ dataset.test_files|join(", ") }}</strong></div>
+    <div><span>Alert threshold</span><strong>{{ "%.2f"|format(metrics.decision_threshold) }}</strong></div>
+  </div>
+</section>
+{% endif %}
+
+{% if metrics %}
+<section class="panel">
+  <div class="panel-heading">
+    <div><h2>Confusion matrix</h2><p>Rows are actual labels; columns are predicted labels. Order: Normal, Deauth.</p></div>
+  </div>
+  <div class="detail-list">
+    <div><span>Normal predicted as Normal</span><strong>{{ metrics.confusion_matrix[0][0] }}</strong></div>
+    <div><span>Normal predicted as Deauth</span><strong>{{ metrics.confusion_matrix[0][1] }}</strong></div>
+    <div><span>Deauth predicted as Normal</span><strong>{{ metrics.confusion_matrix[1][0] }}</strong></div>
+    <div><span>Deauth predicted as Deauth</span><strong>{{ metrics.confusion_matrix[1][1] }}</strong></div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
