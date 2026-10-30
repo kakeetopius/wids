@@ -8,13 +8,17 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
 
 # Local datasets and generated model artifacts
 /CSV/
-/models/
+/models/*
+!/models/deauth_model.joblib
+
+# Local submission archive
+/archive.zip
 
 # Local reference and scratch files
 /read_me.pdf
 /file
 /code-features/
-/README.md

@@ -30,6 +30,23 @@ def load_artifact() -> dict[str, Any] | None:
     return artifact
 
 
+def artifact_summary(artifact: dict[str, Any] | None) -> dict[str, Any]:
+    if artifact is None:
+        return {
+            "status": "not_loaded",
+            "live_capture": False,
+            "response_action": "disabled",
+        }
+    return {
+        "status": "ready_for_offline_replay",
+        "live_capture": False,
+        "response_action": "disabled",
+        "features": artifact.get("features", []),
+        "metrics": artifact.get("metrics", {}),
+        "dataset": artifact.get("dataset", {}),
+    }
+
+
 def render_page(
     request: Request,
     template: str,
@@ -76,6 +93,25 @@ async def dashboard(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/api/health")
+async def health() -> dict[str, Any]:
+    """Expose an explicit readiness state for scripts and demonstrations."""
+    return artifact_summary(load_artifact())
+
+
+@app.get("/api/model")
+async def model_api() -> dict[str, Any]:
+    artifact = load_artifact()
+    if artifact is None:
+        return {"status": "not_loaded", "metrics": None, "dataset": None}
+    return {
+        "status": "ready_for_offline_replay",
+        "features": artifact.get("features", []),
+        "metrics": artifact.get("metrics", {}),
+        "dataset": artifact.get("dataset", {}),
+    }
+
+
 @app.get("/detections", response_class=HTMLResponse)
 async def detections(request: Request) -> HTMLResponse:
     artifact = load_artifact()
@@ -91,6 +127,19 @@ async def detections(request: Request) -> HTMLResponse:
             "detection_mode": detection_data.get("mode", "No model replay available"),
         },
     )
+
+
+@app.get("/api/detections")
+async def detections_api() -> dict[str, Any]:
+    artifact = load_artifact()
+    detection_data = artifact.get("alerts", {}) if artifact else {}
+    return {
+        "mode": detection_data.get("mode", "No model replay available"),
+        "total": detection_data.get("total", 0),
+        "items": detection_data.get("items", []),
+        "live_capture": False,
+        "response_action": "disabled",
+    }
 
 
 @app.get("/model", response_class=HTMLResponse)

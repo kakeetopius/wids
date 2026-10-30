@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WIDS: ML Detection of Wi-Fi Deauthentication Floods</title>
+  <style>
+    @page { size: A1 landscape; margin: 0; }
+    :root { --ink:#142334; --muted:#526274; --teal:#176d70; --pale:#eaf5f3; --line:#cbd8dc; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#dce4e7; color:var(--ink); font-family:Arial, sans-serif; }
+    .poster { width:841mm; min-height:594mm; margin:0 auto; padding:24mm 28mm; background:#fff; }
+    header { border-bottom:2mm solid var(--teal); padding-bottom:11mm; display:flex; justify-content:space-between; gap:20mm; }
+    h1 { margin:0; max-width:620mm; font-size:42pt; line-height:1.04; letter-spacing:-1pt; }
+    .subtitle { margin:7mm 0 0; font-size:19pt; color:var(--muted); }
+    .badge { align-self:center; padding:6mm 8mm; background:var(--pale); color:var(--teal); font-weight:bold; font-size:18pt; border-radius:4mm; }
+    .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10mm; margin-top:13mm; }
+    section { border:0.6mm solid var(--line); border-radius:3mm; padding:8mm; }
+    .wide { grid-column:span 2; }
+    h2 { margin:0 0 5mm; color:var(--teal); font-size:23pt; }
+    h3 { margin:5mm 0 2mm; font-size:16pt; }
+    p, li { font-size:14pt; line-height:1.38; color:var(--muted); }
+    ul, ol { margin:2mm 0 0; padding-left:8mm; }
+    .flow { display:grid; grid-template-columns:repeat(5,1fr); gap:3mm; align-items:stretch; }
+    .step { background:var(--pale); padding:5mm; border-radius:2mm; font-size:13pt; line-height:1.25; }
+    .step strong { display:block; color:var(--teal); font-size:15pt; margin-bottom:2mm; }
+    table { width:100%; border-collapse:collapse; font-size:14pt; }
+    th, td { padding:3mm; border-bottom:0.4mm solid var(--line); text-align:left; }
+    th { color:var(--teal); }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:4mm; }
+    .metric { background:var(--pale); padding:5mm; text-align:center; border-radius:2mm; }
+    .metric b { display:block; font-size:26pt; color:var(--teal); }
+    .metric span { font-size:12pt; color:var(--muted); }
+    .matrix td, .matrix th { text-align:center; }
+    .matrix td { font-size:18pt; font-weight:bold; }
+    .note { background:#fff8e6; border-left:2mm solid #d59d32; padding:5mm; }
+    footer { margin-top:10mm; padding-top:6mm; border-top:0.6mm solid var(--line); display:flex; justify-content:space-between; gap:15mm; }
+    footer p { margin:0; font-size:11pt; }
+    code { font-family:monospace; color:var(--ink); }
+  </style>
+</head>
+<body>
+<main class="poster">
+  <header>
+    <div>
+      <h1>Wireless Intrusion Detection System</h1>
+      <p class="subtitle">A Random Forest prototype for detecting Wi-Fi deauthentication floods</p>
+    </div>
+    <div class="badge">WIDS prototype<br>offline replay</div>
+  </header>
+
+  <div class="grid">
+    <section class="wide">
+      <h2>Why this matters</h2>
+      <p>A deauthentication flood sends repeated management frames that can disconnect
+      wireless clients. This project demonstrates a safe, explainable detector using
+      labelled AWID3 traffic. It raises an alert; it does not attack a network,
+      capture live traffic, or block devices.</p>
+      <h3>Research question</h3>
+      <p>Can simple radio and traffic-rate features distinguish normal Wi-Fi traffic
+      from deauthentication attack traffic on previously unseen capture files?</p>
+    </section>
+    <section>
+      <h2>Objective</h2>
+      <ul>
+        <li>Use a small, reproducible public-data workflow.</li>
+        <li>Detect deauthentication traffic.</li>
+        <li>Report accuracy, recall and a confusion matrix.</li>
+        <li>Provide a dashboard demonstration.</li>
+      </ul>
+    </section>
+
+    <section class="wide">
+      <h2>System workflow</h2>
+      <div class="flow">
+        <div class="step"><strong>1. Input</strong>AWID3 CSV capture files</div>
+        <div class="step"><strong>2. Features</strong>Length, timing, signal, reason code and one-second device rates</div>
+        <div class="step"><strong>3. Model</strong>Balanced Random Forest with median imputation</div>
+        <div class="step"><strong>4. Decision</strong>Threshold selected on validation captures</div>
+        <div class="step"><strong>5. Alert</strong>Confidence-ranked offline replay alert in dashboard</div>
+      </div>
+    </section>
+    <section>
+      <h2>Safety boundary</h2>
+      <div class="note"><p><b>WIDS, not WIPS:</b> response actions are disabled. Any future live capture or attack generation must use an authorised isolated lab network.</p></div>
+      <p>The prototype uses stored test-set predictions so the demonstration is repeatable and safe.</p>
+    </section>
+
+    <section class="wide">
+      <h2>Evaluation design</h2>
+      <p>Complete capture files, rather than random rows, define the split to reduce leakage.</p>
+      <table>
+        <tr><th>Purpose</th><th>Files</th><th>Use</th></tr>
+        <tr><td>Training</td><td>Deauth_0 to Deauth_24</td><td>Fit the classifier</td></tr>
+        <tr><td>Validation</td><td>Deauth_25 to Deauth_28</td><td>Select alert threshold</td></tr>
+        <tr><td>Final test</td><td>Deauth_29 to Deauth_32</td><td>Report final performance</td></tr>
+      </table>
+      <p>Frame type and subtype were excluded because in this AWID3 subset they directly encode the deauthentication label. Traffic-rate features are derived without using labels.</p>
+    </section>
+    <section>
+      <h2>Measured results</h2>
+      <div class="metrics">
+        <div class="metric"><b>98.14%</b><span>accuracy</span></div>
+        <div class="metric"><b>96.51%</b><span>deauth recall</span></div>
+        <div class="metric"><b>99.99%</b><span>deauth precision</span></div>
+        <div class="metric"><b>0.35</b><span>alert threshold</span></div>
+      </div>
+      <h3>Confusion matrix</h3>
+      <table class="matrix">
+        <tr><th>Actual / predicted</th><th>Normal</th><th>Deauth</th></tr>
+        <tr><th>Normal</th><td>15,843</td><td>1</td></tr>
+        <tr><th>Deauth</th><td>629</td><td>17,396</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>What I would improve</h2>
+      <ul>
+        <li>Validate on independent real captures and multiple environments.</li>
+        <li>Add calibrated probabilities and drift monitoring.</li>
+        <li>Test other AWID3 attack classes.</li>
+        <li>Add live monitor-mode ingestion only on an authorised lab network.</li>
+        <li>Compare Random Forest with a simple baseline and cost-sensitive tuning.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Demonstration</h2>
+      <ol>
+        <li><code>uv sync</code></li>
+        <li><code>uv run uvicorn wids.web.app:app</code></li>
+        <li>Open <code>/model</code> and explain the matrix.</li>
+        <li>Open <code>/detections</code> and show replay alerts.</li>
+        <li>Open <code>/api/health</code> to show safety state.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>AI assistance</h2>
+      <p>AI coding assistants were used to help inspect the repository, refactor
+      the training pipeline, connect the dashboard, draft documentation and
+      generate test ideas. The implementation, dataset split, metrics and
+      safety decisions were reviewed and verified by the project author.</p>
+    </section>
+  </div>
+  <footer>
+    <p><b>Reproducibility:</b> Python 3.14 · uv.lock · scikit-learn · FastAPI</p>
+    <p><b>Repository:</b> WIDS Console · Results are offline AWID3 replay, not live protection</p>
+  </footer>
+</main>
+</body>
+</html>
