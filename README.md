@@ -56,10 +56,8 @@ models/deauth_model.joblib
 The included model was evaluated on capture files that were not used for
 training or threshold selection:
 
-| Metric                     | Result |
-| -------------------------- | -----: |
-| Model                 | Accuracy | Deauth precision | Deauth recall | Deauth F1 |
-| --------------------- | -------: | ---------------: | ------------: | --------: |
+| Model                | Accuracy | Deauth precision | Deauth recall | Deauth F1 |
+| -------------------- | -------: | ---------------: | ------------: | --------: |
 | Behavioural detector  | 98.14%   | 99.99%           | 96.51%        | 98.22%    |
 | Protocol baseline     | 100.00%  | 100.00%          | 100.00%       | 100.00%   |
 
