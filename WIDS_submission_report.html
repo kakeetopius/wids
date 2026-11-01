@@ -44,9 +44,10 @@
     features, and classifies observations with a scikit-learn Random Forest.
     To make the evaluation more representative of deployment on unseen
     captures, complete capture files are separated into training, validation
-    and final test groups. On the held-out test captures, the system achieved
-    100.00% accuracy, 100.00% precision and 100.00% recall for deauthentication
-    traffic. The resulting prototype provides confidence-ranked alerts through
+    and final test groups. On the held-out test     captures, the primary behavioural model achieved 98.14% accuracy, 99.99%
+    precision and 96.51% recall for deauthentication traffic. A second
+    protocol-feature baseline achieved 100.00% on the same holdout. The
+    resulting prototype provides confidence-ranked alerts through
     a small web dashboard. It is intentionally an offline WIDS and does not
     transmit attack traffic, capture live networks, or take prevention actions.
   </p>
@@ -57,9 +58,8 @@
     client connections. Deauthentication frames can be abused to disconnect
     clients repeatedly, making deauthentication flooding a suitable attack
     class for a small intrusion-detection prototype. A detector should identify
-    suspicious activity without relying on a single field that simply reveals
-    the label, and it should provide an evaluation on traffic that was not used
-    to train the model.
+    suspicious activity using behavioural features, and it should provide an
+    evaluation on traffic that was not used to train the model.
   </p>
   <p>
     The aim of this project was to build a reproducible WIDS prototype that
@@ -86,11 +86,12 @@
     each source and each destination.
   </p>
   <p>
-    The fields <code>wlan.fc.type</code> and
-    <code>wlan.fc.subtype</code> are included as model inputs. They are highly
-    informative protocol fields for this AWID3 task and are expected to make
-    classification substantially easier. Traffic rates are calculated from
-    timestamps and MAC-address fields without using the label.
+    Two feature sets are evaluated. The primary behavioural model excludes
+    <code>wlan.fc.type</code> and <code>wlan.fc.subtype</code> so it must rely
+    on radio, frame and traffic behaviour. A protocol-feature baseline includes
+    those fields because they are highly informative in this AWID3 subset.
+    Traffic rates are calculated from timestamps and MAC-address fields without
+    using the label.
   </p>
 
   <h2>3. Methodology</h2>
@@ -112,12 +113,12 @@
 
   <h3>3.2 Classifier</h3>
   <p>
-    The classifier is a Random Forest with 300 trees, balanced class weights,
+    Both classifiers are Random Forest models with 300 trees, balanced class weights,
     a minimum leaf size of two and a fixed random seed. Missing numeric values
     are replaced with the median using a scikit-learn pipeline. The model
-    produces a probability for the deauthentication class. A threshold of
-    0.25 was selected on the validation captures to favour detection recall
-    when candidate thresholds produced similar F1 scores.
+    produce a probability for the deauthentication class. The behavioural
+    model selected a threshold of 0.35 and the protocol baseline selected
+    0.25 on validation captures.
   </p>
 
   <h3>3.3 Alert presentation</h3>
@@ -136,8 +137,10 @@
     <code>src/wids/train.py</code>. The resulting Joblib artifact is stored at
     <code>models/deauth_model.joblib</code>. A FastAPI application loads this
     artifact and provides pages for the overview, dataset, model evaluation and
-    detections. It also exposes machine-readable endpoints for health,
-    evaluation metadata and replay alerts.
+    detections. The behavioural model is deployed for replay alerts, while the
+    artifact also stores the protocol baseline and comparison metrics. The
+    application exposes machine-readable endpoints for health, evaluation
+    metadata and replay alerts.
   </p>
   <p>
     The system reports its operating state explicitly. The health endpoint
@@ -152,38 +155,36 @@
     The final test set contains 33,869 labelled observations: 15,844 normal
     observations and 18,025 deauthentication observations. The results below
     were calculated after the threshold had been selected using the validation
-    set.
+    set. The behavioural model is the primary result and the protocol model is
+    included as a comparison.
   </p>
   <table border="1" cellspacing="0" cellpadding="7">
-    <tr><th>Measure</th><th>Value</th></tr>
-    <tr><td>Accuracy</td><td>100.00%</td></tr>
-    <tr><td>Deauthentication precision</td><td>100.00%</td></tr>
-    <tr><td>Deauthentication recall</td><td>100.00%</td></tr>
-    <tr><td>Deauthentication F1-score</td><td>100.00%</td></tr>
-    <tr><td>Decision threshold</td><td>0.25</td></tr>
+    <tr><th>Model</th><th>Accuracy</th><th>Deauth precision</th><th>Deauth recall</th><th>Deauth F1</th></tr>
+    <tr><td>Behavioural detector</td><td>98.14%</td><td>99.99%</td><td>96.51%</td><td>98.22%</td></tr>
+    <tr><td>Protocol baseline</td><td>100.00%</td><td>100.00%</td><td>100.00%</td><td>100.00%</td></tr>
   </table>
 
   <h3>5.1 Confusion matrix</h3>
   <table border="1" cellspacing="0" cellpadding="7">
     <tr><th>Actual / predicted</th><th>Normal</th><th>Deauth</th></tr>
-    <tr><th>Normal</th><td>15,844</td><td>0</td></tr>
-    <tr><th>Deauth</th><td>0</td><td>18,025</td></tr>
+    <tr><th>Normal</th><td>15,843</td><td>1</td></tr>
+    <tr><th>Deauth</th><td>629</td><td>17,396</td></tr>
   </table>
   <p>
-    No errors are present in this particular held-out test set. This result is
-    consistent with the strong information carried by the frame type and
-    subtype fields, but it should not be interpreted as evidence that the
-    detector will achieve perfect performance on independent live captures.
+    The behavioural model produces one false positive and 629 missed
+    deauthentication observations. The protocol baseline produces no errors on
+    this holdout, illustrating the unusually strong information carried by the
+    frame type and subtype fields.
   </p>
 
   <h2>6. Discussion</h2>
   <p>
-    The results indicate that the selected features separate the two classes
-    in the AWID3 captures. The perfect score is primarily explained by the
-    inclusion of protocol fields that are strongly associated with the
-    deauthentication label. This makes the prototype effective for the
-    demonstrated dataset, but less representative of a detector that must
-    infer attacks from weaker behavioural signals alone.
+    The behavioural model provides the more conservative estimate of
+    detection performance because it excludes the two most label-associated
+    protocol fields. Its recall shows that some attack-labelled observations
+    remain difficult to identify. The protocol baseline is useful for showing
+    the effect of those fields, but its perfect score is likely to be
+    dataset-dependent and is not used for the dashboard alerts.
   </p>
   <p>
     The capture-file split is a stronger test than a purely random row split,
@@ -205,12 +206,12 @@
   </p>
   <p>
     The main limitations are the use of one public dataset subset, the focus on
-    one attack class, the use of highly informative protocol fields, and the
-    absence of live-stream latency measurements. Future work should evaluate
-    independent captures, monitor changes in data distribution, calibrate
-    probabilities, compare a model without the protocol fields, and extend the
-    approach to other wireless attack classes. Live ingestion would require
-    additional validation and explicit safety controls.
+    one attack class, the absence of live-stream latency measurements, and the
+    strong dataset dependence of the protocol baseline. Future work should
+    evaluate both models on independent captures, monitor changes in data
+    distribution, calibrate probabilities, and extend the approach to other
+    wireless attack classes. Live ingestion would require additional validation
+    and explicit safety controls.
   </p>
 
   <h2>8. Operational verification</h2>

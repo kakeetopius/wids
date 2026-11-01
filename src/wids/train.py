@@ -46,6 +46,10 @@ METADATA_COLUMNS = [
     "wlan.da",
 ]
 RAW_FEATURES = FEATURES[:14]
+PROTOCOL_FEATURES = ["wlan.fc.type", "wlan.fc.subtype"]
+BEHAVIORAL_FEATURES = [
+    feature for feature in FEATURES if feature not in PROTOCOL_FEATURES
+]
 DECISION_THRESHOLDS = (0.50, 0.45, 0.40, 0.35, 0.30, 0.25, 0.20)
 
 # These complete captures are reserved for final testing. Files 25-28 are
@@ -244,8 +248,79 @@ def _report(
     return report, matrix.tolist()
 
 
-def _model_features(frame: pd.DataFrame) -> pd.DataFrame:
-    return frame.drop(columns=[LABEL, "_source_file", *METADATA_COLUMNS], errors="ignore")
+def _model_features(
+    frame: pd.DataFrame,
+    features: list[str],
+) -> pd.DataFrame:
+    return frame.reindex(columns=features)
+
+
+def _new_model() -> Pipeline:
+    return Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=300,
+                    class_weight="balanced",
+                    min_samples_leaf=2,
+                    random_state=RANDOM_STATE,
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
+
+
+def _evaluate_model(
+    model: Pipeline,
+    X_train: pd.DataFrame,
+    X_validation: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_validation: pd.Series,
+    y_test: pd.Series,
+) -> dict[str, Any]:
+    model.fit(X_train, y_train)
+    deauth_index = list(model.classes_).index("Deauth")
+    validation_probabilities = model.predict_proba(X_validation)[:, deauth_index]
+    candidates = []
+    for candidate in DECISION_THRESHOLDS:
+        candidate_report, _ = _report(
+            y_validation,
+            validation_probabilities,
+            candidate,
+        )
+        candidates.append((candidate, candidate_report))
+    threshold = max(
+        candidates,
+        key=lambda item: (
+            item[1]["Deauth"]["f1-score"],
+            item[1]["Deauth"]["recall"],
+            -item[0],
+        ),
+    )[0]
+    test_probabilities = model.predict_proba(X_test)[:, deauth_index]
+    report, matrix_list = _report(y_test, test_probabilities, threshold)
+    validation_report, validation_matrix = _report(
+        y_validation,
+        validation_probabilities,
+        threshold,
+    )
+    return {
+        "accuracy": float(report["accuracy"]),
+        "classification_report": report,
+        "confusion_matrix": matrix_list,
+        "confusion_matrix_labels": ["Normal", "Deauth"],
+        "decision_threshold": threshold,
+        "validation": {
+            "accuracy": float(validation_report["accuracy"]),
+            "classification_report": validation_report,
+            "confusion_matrix": validation_matrix,
+        },
+        "test_probabilities": test_probabilities,
+    }
 
 
 def main():
@@ -271,11 +346,7 @@ def main():
     if train_data.empty or test_data.empty:
         raise ValueError("Training or testing dataset is empty.")
 
-    X_train = _model_features(train_data)
     y_train = train_data[LABEL]
-
-    X_validation = _model_features(validation_data)
-    X_test = _model_features(test_data)
     y_validation = validation_data[LABEL]
     y_test = test_data[LABEL]
 
@@ -294,50 +365,36 @@ def main():
             "Check the label distribution in the held-out files."
         )
 
-    model = Pipeline(
-        [
-            ("imputer", SimpleImputer(strategy="median")),
-            (
-                "classifier",
-                RandomForestClassifier(
-                    n_estimators=300,
-                    class_weight="balanced",
-                    min_samples_leaf=2,
-                    random_state=RANDOM_STATE,
-                    n_jobs=-1,
-                ),
-            ),
-        ]
-    )
-
-    print("\nTraining model...")
-    model.fit(X_train, y_train)
-
-    deauth_index = list(model.classes_).index("Deauth")
-    validation_probabilities = model.predict_proba(X_validation)[:, deauth_index]
-
-    # Select the lowest threshold with the best validation F1. This favors
-    # finding attacks when several thresholds perform equally well.
-    candidates = []
-    for candidate in DECISION_THRESHOLDS:
-        candidate_report, _ = _report(
+    models: dict[str, Pipeline] = {}
+    evaluations: dict[str, dict[str, Any]] = {}
+    print("\nTraining behavioural model (protocol fields excluded)...")
+    for model_name, model_features in [
+        ("behavioural", BEHAVIORAL_FEATURES),
+        ("protocol_baseline", FEATURES),
+    ]:
+        model = _new_model()
+        evaluation = _evaluate_model(
+            model,
+            _model_features(train_data, model_features),
+            _model_features(validation_data, model_features),
+            _model_features(test_data, model_features),
+            y_train,
             y_validation,
-            validation_probabilities,
-            candidate,
+            y_test,
         )
-        candidates.append((candidate, candidate_report))
-    threshold = max(
-        candidates,
-        key=lambda item: (
-            item[1]["Deauth"]["f1-score"],
-            item[1]["Deauth"]["recall"],
-            -item[0],
-        ),
-    )[0]
+        models[model_name] = model
+        evaluations[model_name] = evaluation
+        print(
+            f"{model_name}: accuracy={evaluation['accuracy']:.4f}, "
+            f"threshold={evaluation['decision_threshold']:.2f}"
+        )
 
-    print(f"\nSelected alert threshold from validation data: {threshold:.2f}")
-    test_probabilities = model.predict_proba(X_test)[:, deauth_index]
-    report, matrix_list = _report(y_test, test_probabilities, threshold)
+    model = models["behavioural"]
+    evaluation = evaluations["behavioural"]
+    report = evaluation["classification_report"]
+    matrix_list = evaluation["confusion_matrix"]
+    threshold = evaluation["decision_threshold"]
+    test_probabilities = evaluation["test_probabilities"]
     test_predictions = test_probabilities >= threshold
     alert_rows = test_data.loc[test_predictions].copy()
     alert_rows["_confidence"] = test_probabilities[test_predictions]
@@ -356,36 +413,33 @@ def main():
         for _, row in alert_rows.iterrows()
     ]
 
-    print("\nClassification report:")
+    print("\nBehavioural model classification report:")
     print(pd.DataFrame(report).transpose().round(4).to_string())
     print("Confusion matrix (Normal, Deauth):")
     print(matrix_list)
-    validation_report, validation_matrix = _report(
-        y_validation,
-        validation_probabilities,
-        threshold,
-    )
 
     artifact = {
         "model": model,
-        "features": list(X_train.columns),
+        "models": models,
+        "features": BEHAVIORAL_FEATURES,
         "classes": list(model.classes_),
         "metrics": {
-            "accuracy": float(report["accuracy"]),
-            "classification_report": report,
-            "confusion_matrix": matrix_list,
-            "confusion_matrix_labels": ["Normal", "Deauth"],
-            "decision_threshold": threshold,
-            "validation": {
-                "accuracy": float(validation_report["accuracy"]),
-                "classification_report": validation_report,
-                "confusion_matrix": validation_matrix,
-            },
+            key: value
+            for key, value in evaluation.items()
+            if key != "test_probabilities"
+        },
+        "model_comparison": {
+            key: {
+                metric_key: metric_value
+                for metric_key, metric_value in model_evaluation.items()
+                if metric_key != "test_probabilities"
+            }
+            for key, model_evaluation in evaluations.items()
         },
         "dataset": {
             "name": "AWID3",
             "rows": int(len(data)),
-            "features": int(len(X_train.columns)),
+            "features": int(len(BEHAVIORAL_FEATURES)),
             "classes": int(y_train.nunique()),
             "label_counts": {
                 str(label): int(count)
@@ -394,10 +448,9 @@ def main():
             "validation_files": sorted(validation_files),
             "test_files": sorted(test_files),
             "split_strategy": "train/validation/test capture-file holdout",
-            "included_protocol_features": [
-                "wlan.fc.type",
-                "wlan.fc.subtype",
-            ],
+            "behavioural_features": BEHAVIORAL_FEATURES,
+            "protocol_baseline_features": FEATURES,
+            "excluded_protocol_features": PROTOCOL_FEATURES,
         },
         "alerts": {
             "mode": "offline test replay",

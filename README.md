@@ -1,7 +1,9 @@
 # Wireless Intrusion Detection System
 
-This project uses a scikit-learn Random Forest model to detect
-deauthentication traffic in the AWID3 wireless dataset. A trained model is included.
+This project uses two scikit-learn Random Forest models to detect
+deauthentication traffic in the AWID3 wireless dataset. The behavioural model
+is the primary detector; a protocol-feature model is retained as a comparison
+baseline.
 
 ## Quick setup
 
@@ -56,17 +58,17 @@ training or threshold selection:
 
 | Metric                     | Result |
 | -------------------------- | -----: |
-| Accuracy                   | 100.00% |
-| Deauthentication precision | 100.00% |
-| Deauthentication recall    | 100.00% |
-| Deauthentication F1-score  | 100.00% |
+| Model                 | Accuracy | Deauth precision | Deauth recall | Deauth F1 |
+| --------------------- | -------: | ---------------: | ------------: | --------: |
+| Behavioural detector  | 98.14%   | 99.99%           | 96.51%        | 98.22%    |
+| Protocol baseline     | 100.00%  | 100.00%          | 100.00%       | 100.00%   |
 
 Confusion matrix:
 
 | Actual / predicted | Normal | Deauth |
 | ------------------ | -----: | -----: |
-| Normal             | 15,844 |      0 |
-| Deauth             |      0 | 18,025 |
+| Normal             | 15,843 |      1 |
+| Deauth             |    629 | 17,396 |
 
 The Detections page displays predictions from this offline test replay. It does not capture live wireless traffic or automatically block devices.
 
@@ -95,12 +97,11 @@ The model uses capture-file groups:
 - Validation: `Deauth_25.csv` through `Deauth_28.csv`
 - Final test: `Deauth_29.csv` through `Deauth_32.csv`
 
-The model includes `wlan.fc.type` and `wlan.fc.subtype` as protocol features.
-These fields are highly informative for this AWID3 task and explain the
-perfect held-out score; the result should not be interpreted as evidence that
-the detector will generalise perfectly to every live wireless environment.
-The trainer also derives one-second overall, source, and destination
-traffic-rate features.
+The primary behavioural model excludes `wlan.fc.type` and `wlan.fc.subtype`.
+The comparison baseline includes them and reaches 100% on this holdout because
+they are highly informative for this AWID3 task. The baseline is not used for
+the dashboard replay alerts. Both models derive one-second overall, source,
+and destination traffic-rate features.
 
 ## A1 poster
 

@@ -39,6 +39,7 @@ def artifact_summary(artifact: dict[str, Any] | None) -> dict[str, Any]:
         }
     return {
         "status": "ready_for_offline_replay",
+        "primary_model": "behavioural",
         "live_capture": False,
         "response_action": "disabled",
         "features": artifact.get("features", []),
@@ -73,6 +74,12 @@ async def dashboard(request: Request) -> HTMLResponse:
     artifact = load_artifact()
     metrics = artifact.get("metrics", {}) if artifact else {}
     dataset = artifact.get("dataset", {}) if artifact else {}
+    comparison = artifact.get("model_comparison", {}) if artifact else {}
+    protocol_metrics = comparison.get("protocol_baseline", {})
+    dataset["protocol_baseline_accuracy"] = protocol_metrics.get("accuracy", 0)
+    dataset["protocol_baseline_recall"] = protocol_metrics.get(
+        "classification_report", {}
+    ).get("Deauth", {}).get("recall", 0)
     return render_page(
         request,
         "dashboard.html",
@@ -106,8 +113,10 @@ async def model_api() -> dict[str, Any]:
         return {"status": "not_loaded", "metrics": None, "dataset": None}
     return {
         "status": "ready_for_offline_replay",
+        "primary_model": "behavioural",
         "features": artifact.get("features", []),
         "metrics": artifact.get("metrics", {}),
+        "model_comparison": artifact.get("model_comparison", {}),
         "dataset": artifact.get("dataset", {}),
     }
 
@@ -146,6 +155,17 @@ async def detections_api() -> dict[str, Any]:
 async def model(request: Request) -> HTMLResponse:
     artifact = load_artifact()
     metrics = artifact.get("metrics") if artifact else None
+    dataset_info = dict(artifact.get("dataset", {})) if artifact else {}
+    comparison = artifact.get("model_comparison", {}) if artifact else {}
+    protocol_metrics = comparison.get("protocol_baseline", {})
+    dataset_info["protocol_baseline_accuracy"] = protocol_metrics.get(
+        "accuracy",
+        0,
+    )
+    dataset_info["protocol_baseline_recall"] = protocol_metrics.get(
+        "classification_report",
+        {},
+    ).get("Deauth", {}).get("recall", 0)
     return render_page(
         request,
         "model.html",
@@ -154,7 +174,7 @@ async def model(request: Request) -> HTMLResponse:
         {
             "model_status": "Trained" if artifact else "Not trained",
             "metrics": metrics,
-            "dataset": artifact.get("dataset", {}) if artifact else {},
+            "dataset": dataset_info,
         },
     )
 
