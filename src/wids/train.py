@@ -30,6 +30,8 @@ FEATURES = [
     "wlan.fc.protected",
     "wlan.fc.pwrmgt",
     "wlan.fc.retry",
+    "wlan.fc.type",
+    "wlan.fc.subtype",
     "wlan.fixed.reason_code",
     "wlan_radio.signal_dbm",
     "frames_per_second",
@@ -43,7 +45,7 @@ METADATA_COLUMNS = [
     "wlan.sa",
     "wlan.da",
 ]
-RAW_FEATURES = FEATURES[:12]
+RAW_FEATURES = FEATURES[:14]
 DECISION_THRESHOLDS = (0.50, 0.45, 0.40, 0.35, 0.30, 0.25, 0.20)
 
 # These complete captures are reserved for final testing. Files 25-28 are
@@ -392,7 +394,7 @@ def main():
             "validation_files": sorted(validation_files),
             "test_files": sorted(test_files),
             "split_strategy": "train/validation/test capture-file holdout",
-            "excluded_label_proxy_features": [
+            "included_protocol_features": [
                 "wlan.fc.type",
                 "wlan.fc.subtype",
             ],

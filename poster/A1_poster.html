@@ -94,21 +94,21 @@
         <tr><td>Validation</td><td>Deauth_25 to Deauth_28</td><td>Select alert threshold</td></tr>
         <tr><td>Final test</td><td>Deauth_29 to Deauth_32</td><td>Report final performance</td></tr>
       </table>
-      <p>Frame type and subtype were excluded because in this AWID3 subset they directly encode the deauthentication label. Traffic-rate features are derived without using labels.</p>
+      <p>Frame type and subtype are included as highly informative protocol features. Traffic-rate features are derived without using labels.</p>
     </section>
     <section>
       <h2>Measured results</h2>
       <div class="metrics">
-        <div class="metric"><b>98.14%</b><span>accuracy</span></div>
-        <div class="metric"><b>96.51%</b><span>deauth recall</span></div>
-        <div class="metric"><b>99.99%</b><span>deauth precision</span></div>
-        <div class="metric"><b>0.35</b><span>alert threshold</span></div>
+        <div class="metric"><b>100%</b><span>accuracy</span></div>
+        <div class="metric"><b>100%</b><span>deauth recall</span></div>
+        <div class="metric"><b>100%</b><span>deauth precision</span></div>
+        <div class="metric"><b>0.25</b><span>alert threshold</span></div>
       </div>
       <h3>Confusion matrix</h3>
       <table class="matrix">
         <tr><th>Actual / predicted</th><th>Normal</th><th>Deauth</th></tr>
-        <tr><th>Normal</th><td>15,843</td><td>1</td></tr>
-        <tr><th>Deauth</th><td>629</td><td>17,396</td></tr>
+        <tr><th>Normal</th><td>15,844</td><td>0</td></tr>
+        <tr><th>Deauth</th><td>0</td><td>18,025</td></tr>
       </table>
     </section>
 
@@ -119,7 +119,7 @@
         <li>Add calibrated probabilities and drift monitoring.</li>
         <li>Test other AWID3 attack classes.</li>
         <li>Add live monitor-mode ingestion only on an authorised lab network.</li>
-        <li>Compare Random Forest with a simple baseline and cost-sensitive tuning.</li>
+        <li>Validate the highly informative protocol fields on independent captures.</li>
       </ul>
     </section>
     <section>

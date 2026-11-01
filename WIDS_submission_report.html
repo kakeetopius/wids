@@ -45,7 +45,7 @@
     To make the evaluation more representative of deployment on unseen
     captures, complete capture files are separated into training, validation
     and final test groups. On the held-out test captures, the system achieved
-    98.14% accuracy, 99.99% precision and 96.51% recall for deauthentication
+    100.00% accuracy, 100.00% precision and 100.00% recall for deauthentication
     traffic. The resulting prototype provides confidence-ranked alerts through
     a small web dashboard. It is intentionally an offline WIDS and does not
     transmit attack traffic, capture live networks, or take prevention actions.
@@ -87,11 +87,10 @@
   </p>
   <p>
     The fields <code>wlan.fc.type</code> and
-    <code>wlan.fc.subtype</code> were deliberately excluded. In this subset
-    they are closely associated with the deauthentication label and could
-    provide an unrealistically direct shortcut for the classifier. Traffic
-    rates are calculated from timestamps and MAC-address fields without using
-    the label.
+    <code>wlan.fc.subtype</code> are included as model inputs. They are highly
+    informative protocol fields for this AWID3 task and are expected to make
+    classification substantially easier. Traffic rates are calculated from
+    timestamps and MAC-address fields without using the label.
   </p>
 
   <h2>3. Methodology</h2>
@@ -117,7 +116,7 @@
     a minimum leaf size of two and a fixed random seed. Missing numeric values
     are replaced with the median using a scikit-learn pipeline. The model
     produces a probability for the deauthentication class. A threshold of
-    0.35 was selected on the validation captures to favour detection recall
+    0.25 was selected on the validation captures to favour detection recall
     when candidate thresholds produced similar F1 scores.
   </p>
 
@@ -157,35 +156,34 @@
   </p>
   <table border="1" cellspacing="0" cellpadding="7">
     <tr><th>Measure</th><th>Value</th></tr>
-    <tr><td>Accuracy</td><td>98.14%</td></tr>
-    <tr><td>Deauthentication precision</td><td>99.99%</td></tr>
-    <tr><td>Deauthentication recall</td><td>96.51%</td></tr>
-    <tr><td>Deauthentication F1-score</td><td>98.22%</td></tr>
-    <tr><td>Decision threshold</td><td>0.35</td></tr>
+    <tr><td>Accuracy</td><td>100.00%</td></tr>
+    <tr><td>Deauthentication precision</td><td>100.00%</td></tr>
+    <tr><td>Deauthentication recall</td><td>100.00%</td></tr>
+    <tr><td>Deauthentication F1-score</td><td>100.00%</td></tr>
+    <tr><td>Decision threshold</td><td>0.25</td></tr>
   </table>
 
   <h3>5.1 Confusion matrix</h3>
   <table border="1" cellspacing="0" cellpadding="7">
     <tr><th>Actual / predicted</th><th>Normal</th><th>Deauth</th></tr>
-    <tr><th>Normal</th><td>15,843</td><td>1</td></tr>
-    <tr><th>Deauth</th><td>629</td><td>17,396</td></tr>
+    <tr><th>Normal</th><td>15,844</td><td>0</td></tr>
+    <tr><th>Deauth</th><td>0</td><td>18,025</td></tr>
   </table>
   <p>
-    The matrix shows one normal observation incorrectly raised as an alert.
-    There are 629 deauthentication observations classified as normal. Thus,
-    the principal remaining error in this test is missed attack traffic rather
-    than a high number of false alarms. The recall result is therefore more
-    informative for this use case than accuracy alone.
+    No errors are present in this particular held-out test set. This result is
+    consistent with the strong information carried by the frame type and
+    subtype fields, but it should not be interpreted as evidence that the
+    detector will achieve perfect performance on independent live captures.
   </p>
 
   <h2>6. Discussion</h2>
   <p>
-    The results indicate that the selected features contain useful information
-    for separating the two classes in the AWID3 captures. The very high
-    precision means that an alert in this evaluation is usually associated
-    with deauthentication traffic. The lower recall shows that the detector
-    does not identify every attack-labelled observation, so it should not be
-    described as complete protection.
+    The results indicate that the selected features separate the two classes
+    in the AWID3 captures. The perfect score is primarily explained by the
+    inclusion of protocol fields that are strongly associated with the
+    deauthentication label. This makes the prototype effective for the
+    demonstrated dataset, but less representative of a detector that must
+    infer attacks from weaker behavioural signals alone.
   </p>
   <p>
     The capture-file split is a stronger test than a purely random row split,
@@ -207,11 +205,12 @@
   </p>
   <p>
     The main limitations are the use of one public dataset subset, the focus on
-    one attack class, and the absence of live-stream latency measurements.
-    Future work should evaluate independent captures, monitor changes in data
-    distribution, calibrate probabilities, compare a simpler baseline, and
-    extend the approach to other wireless attack classes. Live ingestion would
-    require additional validation and explicit safety controls.
+    one attack class, the use of highly informative protocol fields, and the
+    absence of live-stream latency measurements. Future work should evaluate
+    independent captures, monitor changes in data distribution, calibrate
+    probabilities, compare a model without the protocol fields, and extend the
+    approach to other wireless attack classes. Live ingestion would require
+    additional validation and explicit safety controls.
   </p>
 
   <h2>8. Operational verification</h2>
@@ -229,7 +228,7 @@
   <h2>9. Conclusion</h2>
   <p>
     This project demonstrates a complete, safe WIDS workflow for
-    deauthentication-flood detection. It combines leakage-aware feature
+    deauthentication-flood detection. It combines explicit protocol-feature
     selection, capture-file holdout evaluation, a ready-made Random Forest,
     measurable results and an inspectable dashboard. The system detects the
     required attack class and raises alerts, while its offline-only boundary

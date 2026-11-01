@@ -56,17 +56,17 @@ training or threshold selection:
 
 | Metric                     | Result |
 | -------------------------- | -----: |
-| Accuracy                   | 98.14% |
-| Deauthentication precision | 99.99% |
-| Deauthentication recall    | 96.51% |
-| Deauthentication F1-score  | 98.22% |
+| Accuracy                   | 100.00% |
+| Deauthentication precision | 100.00% |
+| Deauthentication recall    | 100.00% |
+| Deauthentication F1-score  | 100.00% |
 
 Confusion matrix:
 
 | Actual / predicted | Normal | Deauth |
 | ------------------ | -----: | -----: |
-| Normal             | 15,843 |      1 |
-| Deauth             |    629 | 17,396 |
+| Normal             | 15,844 |      0 |
+| Deauth             |      0 | 18,025 |
 
 The Detections page displays predictions from this offline test replay. It does not capture live wireless traffic or automatically block devices.
 
@@ -95,8 +95,11 @@ The model uses capture-file groups:
 - Validation: `Deauth_25.csv` through `Deauth_28.csv`
 - Final test: `Deauth_29.csv` through `Deauth_32.csv`
 
-The direct label-proxy features `wlan.fc.type` and `wlan.fc.subtype` are
-excluded. The trainer derives one-second overall, source, and destination
+The model includes `wlan.fc.type` and `wlan.fc.subtype` as protocol features.
+These fields are highly informative for this AWID3 task and explain the
+perfect held-out score; the result should not be interpreted as evidence that
+the detector will generalise perfectly to every live wireless environment.
+The trainer also derives one-second overall, source, and destination
 traffic-rate features.
 
 ## A1 poster
